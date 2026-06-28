@@ -1,0 +1,187 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+// PIN SENSOR & BUZZER
+#define TRIG_PIN 5
+#define ECHO_PIN 18
+#define BUZZER_PIN 25
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+const char* ssid     = "well";
+const char* password = "12345678910";
+const char* serverUrl = "http://192.168.174.232/smart-water-monitoring/api/kirim_data.php";
+
+// UKURAN BOTOL/TANGKI
+const float tinggiBotol = 20.0;   // cm
+const float radiusBotol = 3.0;    // cm (diameter 6 cm)
+
+// TIMER
+unsigned long waktuTerakhirKirim = 0;
+const unsigned long INTERVAL_KIRIM = 5000; // kirim ke server setiap 5 detik
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("OLED gagal");
+    while (true);
+  }
+  display.clearDisplay();
+  display.display();
+
+  hubungkanWiFi();
+}
+
+void loop() {
+  // Jaga koneksi WiFi tetap hidup
+  if (WiFi.status() != WL_CONNECTED) {
+    hubungkanWiFi();
+  }
+
+  float jarak = bacaJarak();
+
+  // Batas maksimum sensor
+  if (jarak > tinggiBotol) jarak = tinggiBotol;
+
+  // Tinggi air
+  float tinggiAir = tinggiBotol - jarak;
+  if (tinggiAir < 0) tinggiAir = 0;
+
+  // Volume
+  float volume = 3.14159 * radiusBotol * radiusBotol * tinggiAir;
+
+  // BUZZER
+  if (volume > 450) {
+    digitalWrite(BUZZER_PIN, HIGH);
+  } else {
+    digitalWrite(BUZZER_PIN, LOW);
+  }
+
+  // SERIAL MONITOR
+  Serial.print("Jarak      : ");
+  Serial.print(jarak, 1);
+  Serial.println(" cm");
+  Serial.print("Tinggi Air : ");
+  Serial.print(tinggiAir, 1);
+  Serial.println(" cm");
+  Serial.print("Volume     : ");
+  Serial.print(volume, 0);
+  Serial.println(" mL");
+  Serial.println("-------------------------");
+
+  // OLED
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("MONITOR AIR");
+  display.setCursor(0, 16);
+  display.print("Jarak : ");
+  display.print(jarak, 1);
+  display.println(" cm");
+  display.setCursor(0, 28);
+  display.print("Air   : ");
+  display.print(tinggiAir, 1);
+  display.println(" cm");
+  display.setCursor(0, 40);
+  display.print("Vol   : ");
+  display.print(volume, 0);
+  display.println(" mL");
+  display.setCursor(0, 54);
+  if (volume > 450) {
+    display.print("Status: PENUH");
+  } else {
+    display.print("Status: AMAN");
+  }
+  // Tampilkan status WiFi kecil di pojok kanan atas
+  display.setCursor(100, 0);
+  display.print(WiFi.status() == WL_CONNECTED ? "W:OK" : "W:--");
+  display.display();
+
+  // KIRIM DATA KE SERVER (setiap 5 detik)
+
+  unsigned long sekarang = millis();
+  if (sekarang - waktuTerakhirKirim >= INTERVAL_KIRIM) {
+    waktuTerakhirKirim = sekarang;
+    kirimDataKeServer(volume, tinggiAir, jarak);
+  }
+
+  delay(500);
+}
+
+
+float bacaJarak() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duration = pulseIn(ECHO_PIN, HIGH, 30000);
+  if (duration == 0) {
+    return tinggiBotol;
+  }
+  return duration * 0.0343 / 2.0;
+}
+
+
+void hubungkanWiFi() {
+  Serial.print("Menghubungkan ke WiFi: ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+
+  int percobaan = 0;
+  while (WiFi.status() != WL_CONNECTED && percobaan < 20) {
+    delay(500);
+    Serial.print(".");
+    percobaan++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi terhubung!");
+    Serial.print("IP Address ESP32: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\nGagal terhubung ke WiFi. Akan dicoba lagi di loop berikutnya...");
+  }
+}
+
+
+void kirimDataKeServer(float volume, float tinggi, float jarak) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi belum terhubung, data tidak dikirim.");
+    return;
+  }
+
+  HTTPClient http;
+  http.begin(serverUrl);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+  String postData = "volume=" + String(volume, 2) +
+                     "&tinggi=" + String(tinggi, 2) +
+                     "&jarak=" + String(jarak, 2);
+
+  int httpResponseCode = http.POST(postData);
+
+  if (httpResponseCode > 0) {
+    String response = http.getString();
+    Serial.println("Response server: " + response);
+  } else {
+    Serial.printf("Gagal mengirim data. Error code: %d\n", httpResponseCode);
+    Serial.println("Cek: apakah komputer & ESP32 di WiFi yang sama? Apakah Laragon/Apache aktif?");
+  }
+
+  http.end();
+}
