@@ -1,0 +1,32 @@
+CREATE DATABASE IF NOT EXISTS smart_water_db
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+USE smart_water_db;
+CREATE TABLE IF NOT EXISTS monitoring (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    volume FLOAT NOT NULL COMMENT 'Volume air dalam mL',
+    tinggi FLOAT NOT NULL COMMENT 'Tinggi air dalam cm',
+    jarak FLOAT NOT NULL COMMENT 'Jarak sensor ke permukaan air dalam cm',
+    status VARCHAR(20) NOT NULL COMMENT 'HAMPIR HABIS / SEDANG / PENUH',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL COMMENT 'Disimpan dalam bentuk hash (bcrypt)',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO monitoring (volume, tinggi, jarak, status, created_at) VALUES
+(420, 14.8, 5.2, 'PENUH', NOW() - INTERVAL 10 MINUTE),
+(425, 15.0, 5.0, 'PENUH', NOW() - INTERVAL 9 MINUTE),
+(380, 13.5, 6.5, 'SEDANG', NOW() - INTERVAL 8 MINUTE),
+(200, 8.2, 11.8, 'SEDANG', NOW() - INTERVAL 7 MINUTE),
+(120, 5.1, 14.9, 'HAMPIR HABIS', NOW() - INTERVAL 6 MINUTE),
+(435, 15.2, 4.8, 'PENUH', NOW() - INTERVAL 5 MINUTE),
+(440, 15.4, 4.6, 'PENUH', NOW() - INTERVAL 4 MINUTE),
+(300, 11.0, 9.0, 'SEDANG', NOW() - INTERVAL 3 MINUTE),
+(45, 2.0, 18.0, 'HAMPIR HABIS', NOW() - INTERVAL 2 MINUTE),
+(430, 15.1, 4.9, 'PENUH', NOW() - INTERVAL 1 MINUTE);
