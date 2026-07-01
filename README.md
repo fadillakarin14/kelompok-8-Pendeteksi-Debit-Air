@@ -45,7 +45,7 @@ Berdasarkan arsitektur perangkat pada gambar `image_c5fb9e.jpg`, berikut adalah 
 
 ### Hasil wiring alat-alat
 
-https://github.com/user-attachments/assets/7d2fc2f1-0bef-4f9f-9e5e-d5f0ed1783e9
+https://github.com/user-attachments/assets/6b937233-c0dc-4f69-9d4a-7419e6d94d2a
 
 ---
 
