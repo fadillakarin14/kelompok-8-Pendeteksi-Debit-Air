@@ -83,6 +83,6 @@ Sistem ini merekam data log ke dalam database dengan struktur kolom utama sebaga
 
 ## Anggota Tim
 
-* **Nama Anggota 1** Rizky Surya Diputra NPM 23552011390 — Hardware & ESP32
-* **Nama Anggota 2**  Karina NurFadilla NPM 23552011012 — Backend PHP
-* **Nama Anggota 3**  Liesna Nur'aeni Aprliani NPM 23552011394 — Frontend & UI
+* **Nama Anggota 1** Rizky Surya Diputra NPM 23552011390
+* **Nama Anggota 2**  Karina NurFadilla NPM 23552011012
+* **Nama Anggota 3**  Liesna Nur'aeni Aprliani NPM 23552011394
